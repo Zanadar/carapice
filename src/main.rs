@@ -1,5 +1,6 @@
 use std::env;
 use std::io::{self, Read, Write};
+use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process;
 use std::process::Command;
@@ -37,9 +38,15 @@ fn main() -> io::Result<()> {
                 process::exit(exit);
             }
 
-            let args: Vec<_> = cmd.split_whitespace().skip(1).collect();
-            let output = Command::new(bin).args(&args).output()?;
+            if bin == "exec" {
+                let bin = cmd.split_whitespace().nth(1).unwrap();
+                let args: Vec<_> = cmd.split_whitespace().skip(2).collect();
+
+                Command::new(bin).args(&args).exec();
+            }
             // show output
+            let args: Vec<_> = cmd.split_whitespace().skip(1).collect();
+            let output = Command::new(&bin).args(&args).output().unwrap();
             println!("{}", String::from_utf8_lossy(&output.stdout))
         }
     }
@@ -55,10 +62,12 @@ impl Cmd {
     }
 }
 
-enum Token<'a> {
-    Cmd(String),
-    Args(Vec<&'a str>),
-    Semi,
-    And,
-    Or,
+// Statement => x;x
+// cmd args sep
+
+enum Token {
+    Word,
+    Op,
 }
+
+//
